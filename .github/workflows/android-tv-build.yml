@@ -12,41 +12,30 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Enable Corepack
-        run: corepack enable
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-
-      - name: Install Bubblewrap
-        run: npm install -g @bubblewrap/cli
-
-      - name: Generate Dummy Keystore
-        run: |
-          keytool -genkey -v -keystore android.keystore -alias android -keyalg RSA -keysize 2048 -validity 10000 -storepass password -keypass password -dname "CN=Youplex, OU=TV, O=Youplex, L=Unknown, ST=Unknown, C=US"
+          cache: 'gradle'
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Build APK with Bubblewrap
+      - name: Grant execute permission for gradlew
+        run: chmod +x android-tv/gradlew || true
+
+      - name: Build with Gradle
         run: |
-          # Configure bubblewrap with the paths set by setup-android
-          mkdir -p ~/.bubblewrap
-          echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > ~/.bubblewrap/config.json
-          
-          # Run build using 'yes' for license acceptance
-          yes | bubblewrap build --quiet --skipActionablePreviews
+          cd android-tv
+          # Generate wrapper if it doesn't exist
+          if [ ! -f "gradlew" ]; then
+            gradle wrapper --gradle-version 8.2.2
+          fi
+          ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-apk
-          path: ./*.apk
+          name: app-debug-apk
+          path: android-tv/app/build/outputs/apk/debug/*.apk
