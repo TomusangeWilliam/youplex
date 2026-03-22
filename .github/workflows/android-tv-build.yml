@@ -33,24 +33,16 @@ jobs:
         run: |
           keytool -genkey -v -keystore android.keystore -alias android -keyalg RSA -keysize 2048 -validity 10000 -storepass password -keypass password -dname "CN=Youplex, OU=TV, O=Youplex, L=Unknown, ST=Unknown, C=US"
 
-      - name: Locate Android SDK and Configure Bubblewrap
-        run: |
-          # Find the actual SDK path on the runner
-          REAL_ANDROID_SDK=$(dirname $(dirname $(find /usr/local/lib/android/sdk -name "adb" | head -n 1)))
-          if [ -z "$REAL_ANDROID_SDK" ]; then REAL_ANDROID_SDK=$ANDROID_HOME; fi
-          
-          echo "Found Android SDK at: $REAL_ANDROID_SDK"
-          mkdir -p ~/.bubblewrap
-          cat <<EOF > ~/.bubblewrap/config.json
-          {
-            "jdkPath": "${JAVA_HOME}",
-            "androidSdkPath": "$REAL_ANDROID_SDK"
-          }
-          EOF
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
       - name: Build APK with Bubblewrap
         run: |
-          # Use yes to bypass any remaining license prompts
+          # Configure bubblewrap with the paths set by setup-android
+          mkdir -p ~/.bubblewrap
+          echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > ~/.bubblewrap/config.json
+          
+          # Run build using 'yes' for license acceptance
           yes | bubblewrap build --quiet --skipActionablePreviews
 
       - name: Upload APK
